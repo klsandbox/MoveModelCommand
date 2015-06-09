@@ -27,76 +27,108 @@ class EditMoveModel extends Command {
         }
 
         foreach (ListModel::getAllModels() as $model) {
-            $this->comment($model->getFilename());
+            $this->processModel($model);
+        }
+    }
 
-            $file = $model->openFile('r');
-            $content = $file->fread($file->getSize());
-            $content = preg_replace("/\bnamespace\s+.*?;/", "namespace App\Models;", $content);
-            $file = $model->openFile('w');
-            $file->fwrite($content);
-            $file->fflush();
+    private function processModel($model) {
+        $this->comment($model->getFilename());
 
-            $targetFolder = app_path('Models/' . $model->getBasename());
-            if ($model->getPathname() != $targetFolder) {
-                File::move($model->getPathname(), $targetFolder);
+        $file = $model->openFile('r');
+        $content = $file->fread($file->getSize());
+        $content = preg_replace("/\bnamespace\s+.*?;/", "namespace App\Models;", $content);
+        $file = $model->openFile('w');
+        $file->fwrite($content);
+        $file->fflush();
+
+        $targetFolder = app_path('Models/' . $model->getBasename());
+        if ($model->getPathname() != $targetFolder) {
+            File::move($model->getPathname(), $targetFolder);
+        }
+
+        $this->comment("Move: " . $model->getPathname() . " to " . $targetFolder);
+
+        $className = preg_replace("/\.[^.]+$/", "", $file->getBasename());
+
+        $appPath = base_path('app');
+        $testsPath = base_path('tests');
+        $databaseSeedsPath = base_path('database/seeds');
+        $configPath = base_path('config');
+
+        $command = "grep -l -R '^\s*use\b.*\\\\$className;' '$appPath' '$testsPath' '$databaseSeedsPath'";
+        $this->comment("USE GREP COMMAND:$command");
+        $out = null;
+        $res = exec($command, $out);
+        foreach ($out as $line) {
+            if (!$line) {
+                continue;
             }
 
-            $this->comment("Move: " . $model->getPathname() . " to " . $targetFolder);
+            $regex = "/^(\\s*use\\s+).*?\\\\$className;/m";
 
-            $className = preg_replace("/\.[^.]+$/", "", $file->getBasename());
+            $this->comment("LINE:$line");
+            $this->comment("REGEX:$regex");
+            //dd($regex);
+            $referrerContent = file_get_contents($line);
 
-            $p1 = base_path('app');
-            $p2 = base_path('tests');
-            $p3 = base_path('database/seeds');
-            $command = "grep -l -R '^\s*use\b.*\\\\$className;' $p1 $p2 $p3";
-            $this->comment("USE GREP COMMAND:$command");
-            $out = null;
-            $res = exec($command, $out);
-            foreach ($out as $line) {
-                if (!$line) {
-                    continue;
-                }
-
-                $regex = "/^(\\s*use\\s+).*?\\\\$className;/m";
-                
-                $this->comment("LINE:$line");
-                $this->comment("REGEX:$regex");
-                //dd($regex);
-                $referrerContent = file_get_contents($line);
-                
-                if (preg_match($regex, $referrerContent))
-                {
-                    $this->comment("Regex found");
-                }
-                else
-                {
-                    $this->comment("Regex not found");
-                }
-                
-                $newReferrerContent = preg_replace($regex, "\$1App\\Models\\$className;", $referrerContent);
-
-                if ($referrerContent != $newReferrerContent) {
-                    file_put_contents($line, $newReferrerContent);
-                }
+            if (preg_match($regex, $referrerContent)) {
+                $this->comment("Regex found");
+            } else {
+                $this->comment("Regex not found");
+                continue;
             }
 
-            //
-            $command = "grep -l -R 'belongsTo\|hasMany\|hasOne' $p1";
-            $this->comment("RELATIONSHIP COMMAND:$command");
-            $out;
-            $res = exec($command, $out);
-            foreach ($out as $line) {
-                if (!$line) {
-                    continue;
-                }
+            $newReferrerContent = preg_replace($regex, "\$1App\\Models\\$className;", $referrerContent);
 
-                $this->comment("LINE RELATIONSHIP:$line");
-                $regex = "/(belongsTo|hasMany|hasOne)\('.*?\\\\$className'\)/m";
-                $referrerContent = file_get_contents($line);
-                $newReferrerContent = preg_replace($regex, "\$1('App\\Models\\$className')", $referrerContent);
-                if ($newReferrerContent != $referrerContent) {
-                    file_put_contents($line, $newReferrerContent);
-                }
+            if ($referrerContent != $newReferrerContent) {
+                file_put_contents($line, $newReferrerContent);
+            }
+        }
+
+        //
+        $command = "grep -l -R 'belongsTo\|hasMany\|hasOne' $appPath";
+        $this->comment("RELATIONSHIP COMMAND:$command");
+        $out;
+        $res = exec($command, $out);
+        foreach ($out as $line) {
+            if (!$line) {
+                continue;
+            }
+
+            $this->comment("LINE RELATIONSHIP:$line");
+            $regex = "/(belongsTo|hasMany|hasOne)\('.*?\\\\$className'\)/m";
+            $referrerContent = file_get_contents($line);
+            $newReferrerContent = preg_replace($regex, "\$1('App\\Models\\$className')", $referrerContent);
+            if ($newReferrerContent != $referrerContent) {
+                file_put_contents($line, $newReferrerContent);
+            }
+        }
+
+        //
+        $command = "grep -l -R \"'model'[[:space:]]*=>[[:space:]]'App\\\\\\\\$className'\" '$configPath'";
+        $this->comment("MODEL CONFIG COMMAND:$command");
+
+        $out;
+        $res = exec($command, $out);
+        foreach ($out as $line) {
+            if (!$line) {
+                continue;
+            }
+
+            $this->comment("LINE RELATIONSHIP:$line");
+            $regex = "/('model'\s*=>\s*)'App\\\\$className'/m";
+            $referrerContent = file_get_contents($line);
+
+            if (preg_match($regex, $referrerContent)) {
+                $this->comment("Regex found");
+            } else {
+                $this->comment("Regex not found");
+                continue;
+            }
+
+            $newReferrerContent = preg_replace($regex, "\$1'App\\Models\\$className'", $referrerContent);
+            if ($newReferrerContent != $referrerContent) {
+                file_put_contents($line, $newReferrerContent);
             }
         }
     }
