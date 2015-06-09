@@ -48,7 +48,7 @@ class EditMoveModel extends Command {
             $p1 = base_path('app');
             $p2 = base_path('tests');
             $p3 = base_path('database/seeds');
-            $command = "grep -l -R '^\s*use\b.*\\$className;' $p1 $p2 $p3";
+            $command = "grep -l -R '^\s*use\b.*\\\\$className;' $p1 $p2 $p3";
             $this->comment("USE GREP COMMAND:$command");
             $out = null;
             $res = exec($command, $out);
@@ -57,14 +57,26 @@ class EditMoveModel extends Command {
                     continue;
                 }
 
-                $this->comment("LINE:$line");
                 $regex = "/^(\\s*use\\s+).*?\\\\$className;/m";
+                
+                $this->comment("LINE:$line");
+                $this->comment("REGEX:$regex");
                 //dd($regex);
                 $referrerContent = file_get_contents($line);
+                
+                if (preg_match($regex, $referrerContent))
+                {
+                    $this->comment("Regex found");
+                }
+                else
+                {
+                    $this->comment("Regex not found");
+                }
+                
                 $newReferrerContent = preg_replace($regex, "\$1App\\Models\\$className;", $referrerContent);
 
                 if ($referrerContent != $newReferrerContent) {
-                    file_put_contents($line, $referrerContent);
+                    file_put_contents($line, $newReferrerContent);
                 }
             }
 
