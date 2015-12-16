@@ -131,6 +131,36 @@ class EditMoveModel extends Command {
                 file_put_contents($line, $newReferrerContent);
             }
         }
+
+        //
+
+
+        $command = "grep -l -R 'App\\\\$className::class' .";
+        $this->comment("MODEL CONFIG CLASS COMMAND:$command");
+
+        $out;
+        $res = exec($command, $out);
+        foreach ($out as $line) {
+            if (!$line) {
+                continue;
+            }
+
+            $this->comment("LINE RELATIONSHIP:$line");
+            $regex = "/App\\\\$className::class/m";
+            $referrerContent = file_get_contents($line);
+
+            if (preg_match($regex, $referrerContent)) {
+                $this->comment("Regex found");
+            } else {
+                $this->comment("Regex not found");
+                continue;
+            }
+
+            $newReferrerContent = preg_replace($regex, "App\\Models\\$className::class", $referrerContent);
+            if ($newReferrerContent != $referrerContent) {
+                file_put_contents($line, $newReferrerContent);
+            }
+        }
     }
 
 }
