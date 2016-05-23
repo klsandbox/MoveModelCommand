@@ -6,8 +6,8 @@ use Illuminate\Console\Command;
 use File;
 use Symfony\Component\Finder\SplFileInfo;
 
-class ListModel extends Command {
-
+class ListModel extends Command
+{
     /**
      * The console command name.
      *
@@ -24,11 +24,12 @@ class ListModel extends Command {
 
     /**
      * @return SplFileInfo */
-    public static function getAllModels() {
+    public static function getAllModels()
+    {
         $files = File::allFiles(app_path());
         foreach ($files as $file) {
             /* @var $file SplFileInfo */
-            $noExt = preg_replace("/\.[^.]+$/", "", $file->getBasename());
+            $noExt = preg_replace("/\.[^.]+$/", '', $file->getBasename());
             $f = $file->openFile();
             $content = $f->fread($f->getSize());
 
@@ -38,10 +39,10 @@ class ListModel extends Command {
         }
     }
 
-    public function fire() {
+    public function fire()
+    {
         foreach (self::getAllModels() as $model) {
             $this->comment($model->getFilename());
         }
     }
-
 }

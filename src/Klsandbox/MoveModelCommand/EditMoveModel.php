@@ -5,8 +5,8 @@ namespace Klsandbox\MoveModelCommand;
 use Illuminate\Console\Command;
 use File;
 
-class EditMoveModel extends Command {
-
+class EditMoveModel extends Command
+{
     /**
      * The console command name.
      *
@@ -21,7 +21,8 @@ class EditMoveModel extends Command {
      */
     protected $description = 'Move models from App to App\Models\.';
 
-    public function fire() {
+    public function fire()
+    {
         if (!File::exists(app_path('Models'))) {
             File::makeDirectory(app_path('Models'));
         }
@@ -31,7 +32,8 @@ class EditMoveModel extends Command {
         }
     }
 
-    private function processModel($model) {
+    private function processModel($model)
+    {
         $this->comment($model->getFilename());
 
         $file = $model->openFile('r');
@@ -46,9 +48,9 @@ class EditMoveModel extends Command {
             File::move($model->getPathname(), $targetFolder);
         }
 
-        $this->comment("Move: " . $model->getPathname() . " to " . $targetFolder);
+        $this->comment('Move: ' . $model->getPathname() . ' to ' . $targetFolder);
 
-        $className = preg_replace("/\.[^.]+$/", "", $file->getBasename());
+        $className = preg_replace("/\.[^.]+$/", '', $file->getBasename());
 
         $appPath = base_path('app');
         $testsPath = base_path('tests');
@@ -72,9 +74,9 @@ class EditMoveModel extends Command {
             $referrerContent = file_get_contents($line);
 
             if (preg_match($regex, $referrerContent)) {
-                $this->comment("Regex found");
+                $this->comment('Regex found');
             } else {
-                $this->comment("Regex not found");
+                $this->comment('Regex not found');
                 continue;
             }
 
@@ -120,9 +122,9 @@ class EditMoveModel extends Command {
             $referrerContent = file_get_contents($line);
 
             if (preg_match($regex, $referrerContent)) {
-                $this->comment("Regex found");
+                $this->comment('Regex found');
             } else {
-                $this->comment("Regex not found");
+                $this->comment('Regex not found');
                 continue;
             }
 
@@ -133,7 +135,6 @@ class EditMoveModel extends Command {
         }
 
         //
-
 
         $command = "grep -l -R 'App\\\\$className::class' .";
         $this->comment("MODEL CONFIG CLASS COMMAND:$command");
@@ -150,9 +151,9 @@ class EditMoveModel extends Command {
             $referrerContent = file_get_contents($line);
 
             if (preg_match($regex, $referrerContent)) {
-                $this->comment("Regex found");
+                $this->comment('Regex found');
             } else {
-                $this->comment("Regex not found");
+                $this->comment('Regex not found');
                 continue;
             }
 
@@ -162,5 +163,4 @@ class EditMoveModel extends Command {
             }
         }
     }
-
 }
